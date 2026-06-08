@@ -5,13 +5,13 @@
       "ESNext"
     ],
     "target": "ES2022",
-    "module": "NodeNext",
+    "module": "esnext",
     "moduleDetection": "force",
     "types": [
       "bun"
     ],
     // Library Bundling Setup
-    "moduleResolution": "NodeNext",
+    "moduleResolution": "bundler",
     "declaration": true,
     "emitDeclarationOnly": true,
     "isolatedDeclarations": true, /* Works perfectly now */
