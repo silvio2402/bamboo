@@ -137,7 +137,7 @@ export class DataFrame<T extends Record<string, unknown>> {
     );
   }
 
-  rename<M extends Partial<Record<keyof T & string, string>>>(
+  rename<const M extends Partial<Record<keyof T & string, string>>>(
     mapping: M,
   ): DataFrame<RenameResult<T, M>> {
     type Result = RenameResult<T, M>;
