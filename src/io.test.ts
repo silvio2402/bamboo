@@ -34,6 +34,22 @@ describe("fromCSV", () => {
     const csv = "name,age";
     expect(fromCSV(csv).toRows()).toEqual([]);
   });
+
+  test("handles Windows line endings (CRLF)", () => {
+    const csv = "name,age\r\nAlice,30\r\nBob,25";
+    expect(fromCSV(csv).toRows()).toEqual([
+      { name: "Alice", age: "30" },
+      { name: "Bob", age: "25" },
+    ]);
+  });
+
+  test("fills missing values with empty string when row is shorter than headers", () => {
+    const csv = "name,age,city\nAlice,30\nBob";
+    expect(fromCSV(csv).toRows()).toEqual([
+      { name: "Alice", age: "30", city: "" },
+      { name: "Bob", age: "", city: "" },
+    ]);
+  });
 });
 
 describe("toCSV", () => {
@@ -60,6 +76,10 @@ describe("toCSV", () => {
     expect(df.toCSV()).toBe('name\n"Says ""hi"""');
   });
 
+  test("returns empty string for empty DataFrame", () => {
+    expect(fromRows([]).toCSV()).toBe("");
+  });
+
   test("round-trips through fromCSV", () => {
     const df = fromRows([
       { name: "Alice", city: "New York" },
@@ -82,5 +102,15 @@ describe("toJSON", () => {
   test("returns empty array for empty DataFrame", () => {
     const df = fromRows([]);
     expect(df.toJSON()).toBe("[]");
+  });
+
+  test("respects active filter", () => {
+    const df = fromRows([
+      { name: "Alice", age: 30 },
+      { name: "Bob", age: 25 },
+    ]);
+    expect(df.filter((r) => r.age > 27).toJSON()).toBe(
+      '[{"name":"Alice","age":30}]',
+    );
   });
 });

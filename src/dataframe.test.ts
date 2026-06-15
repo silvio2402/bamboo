@@ -56,6 +56,11 @@ describe("fromRows", () => {
     const df = fromRows([{ name: "Alice", score: null }]);
     expect(df.toRows()).toEqual([{ name: "Alice", score: null }]);
   });
+
+  test("handles empty array", () => {
+    expect(fromRows([]).toRows()).toEqual([]);
+    expect(fromRows<Record<string, unknown>>([]).toColumns()).toEqual({});
+  });
 });
 
 // ── introspection ─────────────────────────────────────────────────────────────
@@ -70,12 +75,20 @@ describe("size", () => {
     const df = fromRows([{ x: 1 }, { x: 2 }, { x: 3 }]);
     expect(df.filter((r) => r.x > 1).size()).toBe(2);
   });
+
+  test("returns 0 for empty DataFrame", () => {
+    expect(fromRows([]).size()).toBe(0);
+  });
 });
 
 describe("columns", () => {
   test("returns column names", () => {
     const df = fromRows([{ name: "Alice", age: 30 }]);
     expect(df.columns()).toEqual(["name", "age"]);
+  });
+
+  test("returns empty array for empty DataFrame", () => {
+    expect(fromRows([]).columns()).toEqual([]);
   });
 });
 
@@ -106,6 +119,20 @@ describe("head", () => {
         .toRows(),
     ).toEqual([{ x: 1 }, { x: 2 }]);
   });
+
+  test("returns empty for head(0)", () => {
+    const df = fromRows([{ x: 1 }, { x: 2 }]);
+    expect(df.head(0).toRows()).toEqual([]);
+  });
+
+  test("returns all rows when n exceeds size", () => {
+    const df = fromRows([{ x: 1 }, { x: 2 }]);
+    expect(df.head(100).toRows()).toEqual([{ x: 1 }, { x: 2 }]);
+  });
+
+  test("returns empty for empty DataFrame", () => {
+    expect(fromRows<{ x: number }>([]).head(5).toRows()).toEqual([]);
+  });
 });
 
 describe("tail", () => {
@@ -122,6 +149,20 @@ describe("tail", () => {
         .tail(2)
         .toRows(),
     ).toEqual([{ x: 3 }, { x: 4 }]);
+  });
+
+  test("returns empty for tail(0)", () => {
+    const df = fromRows([{ x: 1 }, { x: 2 }]);
+    expect(df.tail(0).toRows()).toEqual([]);
+  });
+
+  test("returns all rows when n exceeds size", () => {
+    const df = fromRows([{ x: 1 }, { x: 2 }]);
+    expect(df.tail(100).toRows()).toEqual([{ x: 1 }, { x: 2 }]);
+  });
+
+  test("returns empty for empty DataFrame", () => {
+    expect(fromRows<{ x: number }>([]).tail(5).toRows()).toEqual([]);
   });
 });
 
@@ -144,6 +185,16 @@ describe("slice", () => {
         .slice(1, 3)
         .toRows(),
     ).toEqual([{ x: 3 }, { x: 4 }]);
+  });
+
+  test("returns empty for slice(0, 0)", () => {
+    const df = fromRows([{ x: 1 }, { x: 2 }]);
+    expect(df.slice(0, 0).toRows()).toEqual([]);
+  });
+
+  test("returns empty when start exceeds size", () => {
+    const df = fromRows([{ x: 1 }, { x: 2 }]);
+    expect(df.slice(10).toRows()).toEqual([]);
   });
 });
 
@@ -188,6 +239,14 @@ describe("filter", () => {
     const df = fromRows([{ age: 10 }, { age: 20 }]);
     expect(df.filter((r) => r.age > 100).toRows()).toEqual([]);
   });
+
+  test("handles empty DataFrame", () => {
+    expect(
+      fromRows<{ age: number }>([])
+        .filter((r) => r.age > 0)
+        .toRows(),
+    ).toEqual([]);
+  });
 });
 
 // ── dropNull ──────────────────────────────────────────────────────────────────
@@ -219,6 +278,10 @@ describe("dropNull", () => {
     df.dropNull();
     expect(df.toRows()).toHaveLength(2);
   });
+
+  test("handles empty DataFrame", () => {
+    expect(fromRows<{ x: number | null }>([]).dropNull().toRows()).toEqual([]);
+  });
 });
 
 // ── fillNull ──────────────────────────────────────────────────────────────────
@@ -248,6 +311,12 @@ describe("fillNull", () => {
     const df = fromRows([{ x: null }]);
     df.fillNull({ x: 0 });
     expect(df.toRows()).toEqual([{ x: null }]);
+  });
+
+  test("handles empty DataFrame", () => {
+    expect(
+      fromRows<{ x: number | null }>([]).fillNull({ x: 0 }).toRows(),
+    ).toEqual([]);
   });
 });
 
@@ -295,10 +364,19 @@ describe("distinct", () => {
     ]);
   });
 
+  test("all identical rows reduces to one row", () => {
+    const df = fromRows([{ x: 1 }, { x: 1 }, { x: 1 }]);
+    expect(df.distinct().toRows()).toEqual([{ x: 1 }]);
+  });
+
   test("does not mutate the original", () => {
     const df = fromRows([{ x: 1 }, { x: 1 }]);
     df.distinct();
     expect(df.toRows()).toHaveLength(2);
+  });
+
+  test("handles empty DataFrame", () => {
+    expect(fromRows<{ x: number }>([]).distinct().toRows()).toEqual([]);
   });
 });
 
@@ -394,6 +472,11 @@ describe("select", () => {
         .toRows(),
     ).toEqual([{ name: "Alice" }]);
   });
+
+  test("select([]) returns rows with no columns", () => {
+    const df = fromRows([{ name: "Alice" }, { name: "Bob" }]);
+    expect(df.select([]).toRows()).toEqual([{}, {}]);
+  });
 });
 
 // ── drop ──────────────────────────────────────────────────────────────────────
@@ -421,12 +504,17 @@ describe("drop", () => {
         .toRows(),
     ).toEqual([{ name: "Alice" }]);
   });
+
+  test("drop([]) is a no-op", () => {
+    const df = fromRows([{ name: "Alice", age: 30 }]);
+    expect(df.drop([]).toRows()).toEqual([{ name: "Alice", age: 30 }]);
+  });
 });
 
 // ── rename ────────────────────────────────────────────────────────────────────
 
 describe("rename", () => {
-  test("renames a column", () => {
+  test("renames a column, leaving others unchanged", () => {
     const df = fromRows([{ name: "Alice", age: 30 }]);
     expect(df.rename({ age: "years" }).toRows()).toEqual([
       { name: "Alice", years: 30 },
@@ -438,11 +526,10 @@ describe("rename", () => {
     expect(df.rename({ a: "x", b: "y" }).toRows()).toEqual([{ x: 1, y: 2 }]);
   });
 
-  test("leaves unmentioned columns unchanged", () => {
-    const df = fromRows([{ name: "Alice", age: 30 }]);
-    expect(df.rename({ age: "years" }).toRows()).toEqual([
-      { name: "Alice", years: 30 },
-    ]);
+  test("renaming to an existing column name silently overwrites it", () => {
+    const df = fromRows([{ a: 1, b: 2 }]);
+    // "a" is renamed to "b"; the original "b" column is processed second and wins
+    expect(df.rename({ a: "b" }).toRows()).toEqual([{ b: 2 }]);
   });
 });
 
@@ -501,6 +588,17 @@ describe("sort", () => {
     expect(result).toEqual([{ age: 10 }, { age: 30 }, { age: null }]);
   });
 
+  test("preserves insertion order for equal sort keys (stable sort)", () => {
+    const df = fromRows([
+      { name: "Bob", age: 30 },
+      { name: "Alice", age: 30 },
+    ]);
+    expect(df.sort([{ col: "age", dir: "asc" }]).toRows()).toEqual([
+      { name: "Bob", age: 30 },
+      { name: "Alice", age: 30 },
+    ]);
+  });
+
   test("does not mutate the original", () => {
     const df = fromRows([{ age: 30 }, { age: 10 }]);
     df.sort([{ col: "age", dir: "asc" }]);
@@ -535,6 +633,11 @@ describe("concat", () => {
     const df1 = fromRows([{ x: 1 }, { x: 2 }]).filter((r) => r.x > 1);
     const df2 = fromRows([{ x: 3 }]);
     expect(df1.concat(df2).toRows()).toEqual([{ x: 2 }, { x: 3 }]);
+  });
+
+  test("concat() with no arguments returns a materialized copy", () => {
+    const df = fromRows([{ x: 1 }, { x: 2 }]);
+    expect(df.concat().toRows()).toEqual([{ x: 1 }, { x: 2 }]);
   });
 
   test("does not mutate the original", () => {
@@ -585,6 +688,31 @@ describe("aggregation helpers", () => {
 
   test("median returns null for empty", () => {
     expect(median("val")([])).toBeNull();
+  });
+
+  // null semantics
+  test("sum treats nulls as 0", () => {
+    expect(sum("val")([{ val: 10 }, { val: null }])).toBe(10);
+  });
+
+  test("mean treats nulls as 0 (counts toward denominator)", () => {
+    expect(mean("val")([{ val: 10 }, { val: null }])).toBe(5);
+  });
+
+  test("mean returns 0 for empty input", () => {
+    expect(mean("val")([])).toBe(0);
+  });
+
+  test("min skips nulls", () => {
+    expect(min("val")([{ val: 10 }, { val: null }])).toBe(10);
+  });
+
+  test("max skips nulls", () => {
+    expect(max("val")([{ val: 10 }, { val: null }])).toBe(10);
+  });
+
+  test("median skips nulls", () => {
+    expect(median("val")([{ val: 10 }, { val: null }])).toBe(10);
   });
 
   test("helpers work inside groupBy aggregate", () => {
@@ -676,6 +804,34 @@ describe("groupBy + aggregate", () => {
       { country: "US", dept: "HR", total: 3 },
     ]);
   });
+
+  test("multi-column groupBy respects filter before grouping", () => {
+    const df = fromRows([
+      { country: "US", dept: "Eng", n: 10 },
+      { country: "US", dept: "HR", n: 5 },
+      { country: "UK", dept: "Eng", n: 7 },
+    ]);
+    const result = df
+      .filter((r) => r.country === "US")
+      .groupBy(["country", "dept"])
+      .aggregate({ total: (rows) => rows.reduce((s, r) => s + r.n, 0) })
+      .sort([{ col: "dept", dir: "asc" }])
+      .toRows();
+    expect(result).toEqual([
+      { country: "US", dept: "Eng", total: 10 },
+      { country: "US", dept: "HR", total: 5 },
+    ]);
+  });
+
+  test("returns empty DataFrame when source is empty", () => {
+    const df = fromRows<{ dept: string; val: number }>([]);
+    expect(
+      df
+        .groupBy("dept")
+        .aggregate({ total: sum("val") })
+        .toRows(),
+    ).toEqual([]);
+  });
 });
 
 // ── join ──────────────────────────────────────────────────────────────────────
@@ -711,6 +867,22 @@ describe("join", () => {
     expect(result.every((r) => r.dept != null)).toBe(true);
   });
 
+  test("inner join one-to-many produces multiple output rows", () => {
+    const left = fromRows([{ id: 1, name: "Alice" }]);
+    const right = fromRows([
+      { id: 1, tag: "A" },
+      { id: 1, tag: "B" },
+    ]);
+    const result = left
+      .join(right, { on: "id" })
+      .sort([{ col: "tag", dir: "asc" }])
+      .toRows();
+    expect(result).toEqual([
+      { id: 1, name: "Alice", tag: "A" },
+      { id: 1, name: "Alice", tag: "B" },
+    ]);
+  });
+
   test("left join keeps all left rows with nulls for unmatched right", () => {
     const leftDf = fromRows([
       { id: 1, deptId: 10 },
@@ -723,6 +895,29 @@ describe("join", () => {
     expect(result).toEqual([
       { id: 1, deptId: 10, dept: "Engineering" },
       { id: 4, deptId: 99, dept: null },
+    ]);
+  });
+
+  test("left join one-to-many produces multiple output rows", () => {
+    const left = fromRows([
+      { id: 1, name: "Alice" },
+      { id: 2, name: "Bob" },
+    ]);
+    const right = fromRows([
+      { id: 1, tag: "A" },
+      { id: 1, tag: "B" },
+    ]);
+    const result = left
+      .join(right, { on: "id", how: "left" })
+      .sort([
+        { col: "name", dir: "asc" },
+        { col: "tag", dir: "asc" },
+      ])
+      .toRows();
+    expect(result).toEqual([
+      { id: 1, name: "Alice", tag: "A" },
+      { id: 1, name: "Alice", tag: "B" },
+      { id: 2, name: "Bob", tag: null },
     ]);
   });
 
