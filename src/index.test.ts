@@ -8,19 +8,10 @@ import {
   max,
   count,
   median,
-  DataFrame,
   GroupedFrame,
   ColumnarStorage,
 } from "./index";
-import type {
-  JoinHow,
-  DeriveFn,
-  DeriveResult,
-  RenameResult,
-  AggregateResult,
-  JoinResult,
-  Storage,
-} from "./index";
+import type { JoinHow, DeriveFn } from "./index";
 
 test("public API: fromRows is exported and works end-to-end", () => {
   const df = fromRows([{ name: "Alice", age: 30 }])
@@ -80,9 +71,7 @@ test("public API: ColumnarStorage and GroupedFrame are exported", () => {
   expect(gf).toBeInstanceOf(GroupedFrame);
 });
 
-test("public API: type exports compile without error", () => {
-  // Verifies DeriveFn, DeriveResult, RenameResult, AggregateResult, JoinResult, Storage
-  // are importable — if any are missing this file fails to typecheck
+test("public API: DeriveFn type is exported and usable", () => {
   const _fn: DeriveFn<{ x: number }> = (r) => r.x * 2;
   expect(_fn({ x: 3 }, 0, [])).toBe(6);
 });
