@@ -131,7 +131,9 @@ export class DataFrame<T extends Record<string, unknown>> {
       newCols[col] = this.storage.getColumn(col);
     }
     return new DataFrame<Pick<T, K>>(
-      ColumnarStorage.fromUnsafe<Pick<T, K>>(newCols as Record<string, unknown[]>),
+      ColumnarStorage.fromUnsafe<Pick<T, K>>(
+        newCols as Record<string, unknown[]>,
+      ),
       [...this.bitmask],
       [...this.sortIndex],
     );

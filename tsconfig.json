@@ -1,20 +1,16 @@
 {
   "compilerOptions": {
     // Environment setup & target
-    "lib": [
-      "ESNext"
-    ],
+    "lib": ["ESNext"],
     "target": "ES2022",
     "module": "esnext",
     "moduleDetection": "force",
-    "types": [
-      "bun"
-    ],
+    "types": ["bun"],
     // Library Bundling Setup
     "moduleResolution": "bundler",
     "declaration": true,
     "emitDeclarationOnly": true,
-    "isolatedDeclarations": true, /* Works perfectly now */
+    "isolatedDeclarations": true /* Works perfectly now */,
     "verbatimModuleSyntax": true,
     // Best practices
     "strict": true,
@@ -27,7 +23,5 @@
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": false
   },
-  "include": [
-    "src/**/*"
-  ]
+  "include": ["src/**/*"]
 }

@@ -71,7 +71,10 @@ describe("filter", () => {
   });
 
   test("does not mutate the original", () => {
-    const df = fromRows([{ name: "Alice", age: 30 }, { name: "Bob", age: 25 }]);
+    const df = fromRows([
+      { name: "Alice", age: 30 },
+      { name: "Bob", age: 25 },
+    ]);
     df.filter((r) => r.age > 27);
     expect(df.toRows()).toHaveLength(2);
   });
@@ -103,7 +106,9 @@ describe("derive", () => {
   test("adds a new column", () => {
     const df = fromRows([{ name: "Alice", age: 30 }]);
     const result = df.derive({ initials: (r) => r.name[0] });
-    expect(result.toRows()).toEqual([{ name: "Alice", age: 30, initials: "A" }]);
+    expect(result.toRows()).toEqual([
+      { name: "Alice", age: 30, initials: "A" },
+    ]);
   });
 
   test("overwrites an existing column", () => {
@@ -125,8 +130,13 @@ describe("derive", () => {
 
   test("respects active filter", () => {
     const df = fromRows([{ age: 10 }, { age: 20 }, { age: 30 }]);
-    const result = df.filter((r) => r.age >= 20).derive({ doubled: (r) => r.age * 2 });
-    expect(result.toRows()).toEqual([{ age: 20, doubled: 40 }, { age: 30, doubled: 60 }]);
+    const result = df
+      .filter((r) => r.age >= 20)
+      .derive({ doubled: (r) => r.age * 2 });
+    expect(result.toRows()).toEqual([
+      { age: 20, doubled: 40 },
+      { age: 30, doubled: 60 },
+    ]);
   });
 
   test("does not mutate the original", () => {
@@ -152,7 +162,10 @@ describe("select", () => {
       { name: "Bob", age: 25 },
     ]);
     expect(
-      df.filter((r) => r.age > 27).select(["name"]).toRows(),
+      df
+        .filter((r) => r.age > 27)
+        .select(["name"])
+        .toRows(),
     ).toEqual([{ name: "Alice" }]);
   });
 });

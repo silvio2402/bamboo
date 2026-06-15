@@ -4,9 +4,9 @@ export interface Storage<T extends Record<string, unknown>> {
   columnNames(): Array<keyof T>;
 }
 
-export class ColumnarStorage<T extends Record<string, unknown>>
-  implements Storage<T>
-{
+export class ColumnarStorage<
+  T extends Record<string, unknown>,
+> implements Storage<T> {
   private readonly cols: { [K in keyof T]: T[K][] };
 
   constructor(cols: { [K in keyof T]: T[K][] }) {
