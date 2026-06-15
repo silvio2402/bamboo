@@ -13,19 +13,23 @@ export const mean =
 export const min =
   (col: string) =>
   (rows: Record<string, unknown>[]): number | null => {
-    const vals = rows
-      .map((r) => r[col] as number | null)
-      .filter((v): v is number => v != null);
-    return vals.length === 0 ? null : Math.min(...vals);
+    let result: number | null = null;
+    for (const r of rows) {
+      const v = r[col] as number | null;
+      if (v != null && (result === null || v < result)) result = v;
+    }
+    return result;
   };
 
 export const max =
   (col: string) =>
   (rows: Record<string, unknown>[]): number | null => {
-    const vals = rows
-      .map((r) => r[col] as number | null)
-      .filter((v): v is number => v != null);
-    return vals.length === 0 ? null : Math.max(...vals);
+    let result: number | null = null;
+    for (const r of rows) {
+      const v = r[col] as number | null;
+      if (v != null && (result === null || v > result)) result = v;
+    }
+    return result;
   };
 
 export const count =

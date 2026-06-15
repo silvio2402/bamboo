@@ -1,5 +1,6 @@
 import { ColumnarStorage } from "./storage";
 import type { Storage } from "./storage";
+import { Lazy } from "./lazy";
 
 export type DeriveFn<T> = (row: T, index: number, allRows: T[]) => unknown;
 
@@ -80,6 +81,9 @@ export class DataFrame<T extends Record<string, unknown>> {
     private readonly storage: Storage<T>,
     private readonly bitmask: boolean[],
     private readonly sortIndex: number[],
+    private readonly _activeIndices: Lazy<number[]> = new Lazy(() =>
+      sortIndex.filter((i) => bitmask[i]),
+    ),
   ) {}
 
   static _create<U extends Record<string, unknown>>(
@@ -91,7 +95,7 @@ export class DataFrame<T extends Record<string, unknown>> {
   }
 
   private activeIndices(): number[] {
-    return this.sortIndex.filter((i) => this.bitmask[i]);
+    return this._activeIndices.get();
   }
 
   private rowAt(i: number): T {
@@ -298,10 +302,12 @@ export class DataFrame<T extends Record<string, unknown>> {
   sort(by: Array<{ col: keyof T; dir: "asc" | "desc" }>): DataFrame<T> {
     const n = this.storage.size();
     const newSortIndex = Array.from({ length: n }, (_, i) => i);
+    const colArrays = by.map(({ col }) => this.storage.getColumn(col));
 
     newSortIndex.sort((a, b) => {
-      for (const { col, dir } of by) {
-        const colData = this.storage.getColumn(col);
+      for (let ci = 0; ci < by.length; ci++) {
+        const colData = colArrays[ci]!;
+        const dir = by[ci]!.dir;
         const aVal = colData[a];
         const bVal = colData[b];
         if (aVal === bVal) continue;
