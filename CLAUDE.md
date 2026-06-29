@@ -1,23 +1,19 @@
 
-Default to using Bun instead of Node.js.
+Supports both Bun and Node.js.
 
-- Use `bun <file>` instead of `node <file>` or `ts-node <file>`
-- Use `bun test` instead of `jest` or `vitest`
-- Use `bun build <file.html|file.ts|file.css>` instead of `webpack` or `esbuild`
-- Use `bun install` instead of `npm install` or `yarn install` or `pnpm install`
-- Use `bun run <script>` instead of `npm run <script>` or `yarn run <script>` or `pnpm run <script>`
-- Use `bunx <package> <command>` instead of `npx <package> <command>`
-- Bun automatically loads .env, so don't use dotenv.
+- Use `bun <file>` or `node --experimental-strip-types <file>` (Node 22+) / `tsx <file>`
+- Use `bun test` or `node --test` (Node 20+)
+- Use `bun install` or `npm install`
+- Bun automatically loads .env, for Node use `--env-file=.env` (Node 20.6+)
+- Prefer standard Node.js APIs (e.g., `node:fs`, `node:path`) for broader compatibility in library code and examples.
 
 ## APIs
 
-- `Bun.serve()` supports WebSockets, HTTPS, and routes. Don't use `express`.
-- `bun:sqlite` for SQLite. Don't use `better-sqlite3`.
-- `Bun.redis` for Redis. Don't use `ioredis`.
-- `Bun.sql` for Postgres. Don't use `pg` or `postgres.js`.
-- `WebSocket` is built-in. Don't use `ws`.
-- Prefer `Bun.file` over `node:fs`'s readFile/writeFile
-- Bun.$`ls` instead of execa.
+- `Bun.serve()` is great for Bun-only apps, but for cross-runtime use standard `Request`/`Response` handlers.
+- Prefer `node:fs` `readFileSync`/`writeFileSync` over `Bun.file` in examples to avoid IDE errors for non-Bun users.
+- `bun:sqlite` for SQLite in Bun, `better-sqlite3` for Node.
+- `WebSocket` is built-in in Bun and newer Node.
+- `Bun.$` is Bun-specific; use `node:child_process` or `execa` for cross-runtime scripts.
 
 ## Testing
 

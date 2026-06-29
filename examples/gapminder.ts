@@ -3,14 +3,17 @@
  * Source: https://github.com/resbaz/r-novice-gapminder-files (CC BY)
  * 1,704 rows · 142 countries · 1952–2007 in 5-year increments
  *
- * Run: bun examples/gapminder.ts
+ * Run (Bun):  bun examples/gapminder.ts
+ * Run (Node): node --experimental-strip-types examples/gapminder.ts
  */
 
+import { readFileSync } from "node:fs";
 import { count, fromCSV, fromRows, mean } from "../src/index";
 
-const text = await Bun.file(
+const text = readFileSync(
   new URL("./data/gapminder.csv", import.meta.url),
-).text();
+  "utf-8",
+);
 
 type GapRow = {
   country: string;
@@ -27,12 +30,12 @@ const df = fromRows(
     .toRows()
     .map(
       (r): GapRow => ({
-        country: r.country,
-        continent: r.continent,
-        year: parseInt(r.year),
-        lifeExp: parseFloat(r.lifeExp),
-        pop: parseInt(r.pop),
-        gdpPercap: parseFloat(r.gdpPercap),
+        country: r.country!,
+        continent: r.continent!,
+        year: parseInt(r.year!),
+        lifeExp: parseFloat(r.lifeExp!),
+        pop: parseInt(r.pop!),
+        gdpPercap: parseFloat(r.gdpPercap!),
       }),
     ),
 );

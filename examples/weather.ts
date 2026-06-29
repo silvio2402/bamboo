@@ -3,14 +3,17 @@
  * Source: https://corgis-edu.github.io/corgis/datasets/csv/weather/ (NOAA public domain)
  * ~16,700 rows · weekly readings · ~200 US cities · 2016
  *
- * Run: bun examples/weather.ts
+ * Run (Bun):  bun examples/weather.ts
+ * Run (Node): node --experimental-strip-types examples/weather.ts
  */
 
+import { readFileSync } from "node:fs";
 import { fromCSV, fromRows, max, mean, min, sum } from "../src/index";
 
-const text = await Bun.file(
+const text = readFileSync(
   new URL("./data/weather.csv", import.meta.url),
-).text();
+  "utf-8",
+);
 
 type WeatherRow = {
   city: string;
@@ -30,15 +33,15 @@ const df = fromRows(
     .toRows()
     .map(
       (r): WeatherRow => ({
-        city: r["Station.City"],
-        state: r["Station.State"],
-        date: r["Date.Full"],
-        month: parseInt(r["Date.Month"]),
-        precipitation: parseFloat(r["Data.Precipitation"]),
-        avgTemp: parseFloat(r["Data.Temperature.Avg Temp"]),
-        maxTemp: parseFloat(r["Data.Temperature.Max Temp"]),
-        minTemp: parseFloat(r["Data.Temperature.Min Temp"]),
-        windSpeed: parseFloat(r["Data.Wind.Speed"]),
+        city: r["Station.City"]!,
+        state: r["Station.State"]!,
+        date: r["Date.Full"]!,
+        month: parseInt(r["Date.Month"]!),
+        precipitation: parseFloat(r["Data.Precipitation"]!),
+        avgTemp: parseFloat(r["Data.Temperature.Avg Temp"]!),
+        maxTemp: parseFloat(r["Data.Temperature.Max Temp"]!),
+        minTemp: parseFloat(r["Data.Temperature.Min Temp"]!),
+        windSpeed: parseFloat(r["Data.Wind.Speed"]!),
       }),
     ),
 );

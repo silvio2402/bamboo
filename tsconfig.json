@@ -5,7 +5,7 @@
     "target": "ES2022",
     "module": "esnext",
     "moduleDetection": "force",
-    "types": ["bun"],
+    "types": ["node", "bun"],
     // Library Bundling Setup
     "moduleResolution": "bundler",
     "declaration": true,
@@ -23,5 +23,5 @@
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": false
   },
-  "include": ["src/**/*"]
+  "include": ["src/**/*", "examples/**/*"]
 }

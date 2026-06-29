@@ -2,7 +2,8 @@
  * Multi-table e-commerce sales pipeline using synthetic inline data.
  * Demonstrates: fromRows, concat, fillNull, join, derive, groupBy+aggregate, toJSON.
  *
- * Run: bun examples/ecommerce.ts
+ * Run (Bun):  bun examples/ecommerce.ts
+ * Run (Node): node --experimental-strip-types examples/ecommerce.ts
  */
 
 import { count, fromRows, mean, sum } from "../src/index";
