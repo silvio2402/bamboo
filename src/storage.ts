@@ -16,7 +16,7 @@ export class ColumnarStorage<
     this._columnNames = Object.keys(cols) as Array<keyof T>;
     this._size =
       this._columnNames.length > 0
-        ? (this.cols[this._columnNames[0]!] as unknown[]).length
+        ? this.cols[this._columnNames[0]!].length
         : 0;
   }
 

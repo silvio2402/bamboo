@@ -80,7 +80,7 @@ export class GroupedFrame<
     private readonly keys: ReadonlyArray<K>,
   ) {}
 
-  aggregate<A extends Record<string, (rows: T[]) => unknown>>(
+  aggregate<A extends Record<string, AggFn<T>>>(
     aggregations: A,
   ): DataFrame<AggregateResult<T, K, A>> {
     type Result = AggregateResult<T, K, A>;
@@ -94,20 +94,21 @@ export class GroupedFrame<
       groups.get(groupKey)!.push(row);
     }
 
-    const resultRows: Result[] = [];
-    for (const [, groupRows] of groups) {
-      const resultRow = {} as unknown as Result;
-      for (const k of this.keys) {
-        (resultRow as Record<string, unknown>)[k as string] = groupRows[0]![k];
-      }
-      for (const aggKey of Object.keys(aggregations)) {
-        (resultRow as Record<string, unknown>)[aggKey] =
-          aggregations[aggKey]!(groupRows);
-      }
-      resultRows.push(resultRow);
-    }
-
-    return fromRows(resultRows);
+    return fromRows(
+      Array.from(groups.values()).map(
+        (groupRows) =>
+          ({
+            ...typedFromEntries(
+              this.keys.map((k) => [k, groupRows[0]![k]] as const),
+            ),
+            ...typedFromEntries(
+              typedKeys(aggregations).map(
+                (aggKey) => [aggKey, aggregations[aggKey]!(groupRows)] as const,
+              ),
+            ),
+          }) as Result,
+      ),
+    );
   }
 }
 
@@ -134,19 +135,20 @@ export class DataFrame<T extends Record<string, unknown>> {
   }
 
   private rowAt(i: number): T {
-    const row: Record<string, unknown> = {};
-    for (const col of this.storage.columnNames()) {
-      row[col as string] = this.storage.getColumn(col)[i];
-    }
-    return row as T;
+    return typedFromEntries(
+      this.storage
+        .columnNames()
+        .map((col) => [col, this.storage.getColumn(col)[i]] as const),
+    ) as T;
   }
 
   private materializeRows(indices: number[]): DataFrame<T> {
-    const newCols: Record<string, unknown[]> = {};
-    for (const col of this.storage.columnNames()) {
-      const colData = this.storage.getColumn(col);
-      newCols[col as string] = indices.map((i) => colData[i]);
-    }
+    const newCols = typedFromEntries(
+      this.storage.columnNames().map((col) => {
+        const colData = this.storage.getColumn(col);
+        return [col, indices.map((i) => colData[i])] as const;
+      }),
+    );
     const n = indices.length;
     return new DataFrame<T>(
       ColumnarStorage.fromUnsafe<T>(newCols),
@@ -171,14 +173,14 @@ export class DataFrame<T extends Record<string, unknown>> {
     return this.activeIndices().map((i) => this.rowAt(i));
   }
 
-  toColumns(): { [K in keyof T]: T[K][] } {
+  toColumns(): ColumnarData<T> {
     const indices = this.activeIndices();
-    const result = {} as { [K in keyof T]: T[K][] };
-    for (const col of this.storage.columnNames()) {
-      const colData = this.storage.getColumn(col);
-      result[col] = indices.map((i) => colData[i]!);
-    }
-    return result;
+    return typedFromEntries(
+      this.storage.columnNames().map((col) => {
+        const colData = this.storage.getColumn(col);
+        return [col, indices.map((i) => colData[i]!)] as const;
+      }),
+    ) as ColumnarData<T>;
   }
 
   toCSV(): string {
@@ -245,11 +247,6 @@ export class DataFrame<T extends Record<string, unknown>> {
   ): DataFrame<DeriveResult<T, D>> {
     type Result = DeriveResult<T, D>;
     const n = this.storage.size();
-    const newCols: Record<string, unknown[]> = {};
-
-    for (const col of this.storage.columnNames()) {
-      newCols[col as string] = this.storage.getColumn(col) as unknown[];
-    }
 
     const activeIdx = this.activeIndices();
     const visibleRows = activeIdx.map((i) => this.rowAt(i));
@@ -257,14 +254,28 @@ export class DataFrame<T extends Record<string, unknown>> {
       activeIdx.map((storageIdx, visibleIdx) => [storageIdx, visibleIdx]),
     );
 
-    for (const key of Object.keys(derivations)) {
-      const fn = derivations[key]!;
-      const col = new Array<unknown>(n);
-      for (let i = 0; i < n; i++) {
-        col[i] = fn(this.rowAt(i), visibleIndexMap.get(i) ?? -1, visibleRows);
-      }
-      newCols[key] = col;
-    }
+    const newCols = {
+      ...typedFromEntries(
+        this.storage
+          .columnNames()
+          .map((col) => [col, this.storage.getColumn(col)] as const),
+      ),
+      ...typedFromEntries(
+        typedKeys(derivations).map(
+          (key) =>
+            [
+              key,
+              Array.from({ length: n }, (_, i) =>
+                derivations[key]!(
+                  this.rowAt(i),
+                  visibleIndexMap.get(i) ?? -1,
+                  visibleRows,
+                ),
+              ),
+            ] as const,
+        ),
+      ),
+    };
 
     return new DataFrame<Result>(
       ColumnarStorage.fromUnsafe<Result>(newCols),
@@ -274,14 +285,12 @@ export class DataFrame<T extends Record<string, unknown>> {
   }
 
   select<K extends keyof T>(cols: readonly K[]): DataFrame<Pick<T, K>> {
-    const newCols = {} as { [PK in K]: T[PK][] };
+    const newCols = {} as ColumnarData<Pick<T, K>>;
     for (const col of cols) {
       newCols[col] = this.storage.getColumn(col);
     }
     return new DataFrame<Pick<T, K>>(
-      ColumnarStorage.fromUnsafe<Pick<T, K>>(
-        newCols as Record<string, unknown[]>,
-      ),
+      new ColumnarStorage(newCols),
       [...this.bitmask],
       [...this.sortIndex],
     );
@@ -291,22 +300,20 @@ export class DataFrame<T extends Record<string, unknown>> {
     const toDrop = new Set<keyof T>(cols);
     const remaining = this.storage
       .columnNames()
-      .filter((c) => !toDrop.has(c)) as Array<Exclude<keyof T, K>>;
-    return this.select(remaining) as unknown as DataFrame<Omit<T, K>>;
+      .filter((c): c is Exclude<keyof T, K> => !toDrop.has(c));
+    return this.select(remaining);
   }
 
   rename<const M extends Partial<Record<keyof T & string, string>>>(
     mapping: M,
   ): DataFrame<RenameResult<T, M>> {
     type Result = RenameResult<T, M>;
-    const newCols: Record<string, unknown[]> = {};
-
-    for (const col of this.storage.columnNames()) {
-      const colStr = col as string;
-      const newName = (mapping as Record<string, string>)[colStr] ?? colStr;
-      newCols[newName] = this.storage.getColumn(col) as unknown[];
-    }
-
+    const newCols = typedFromEntries(
+      this.storage.columnNames().map((col) => {
+        const newName = mapping[col as keyof T & string] ?? (col as string);
+        return [newName, this.storage.getColumn(col)] as const;
+      }),
+    );
     return new DataFrame<Result>(
       ColumnarStorage.fromUnsafe<Result>(newCols),
       [...this.bitmask],
@@ -314,17 +321,17 @@ export class DataFrame<T extends Record<string, unknown>> {
     );
   }
 
-  fillNull(defaults: Partial<Record<keyof T, unknown>>): DataFrame<T> {
-    const n = this.storage.size();
-    const newCols: Record<string, unknown[]> = {};
-
-    for (const col of this.storage.columnNames()) {
-      const colData = this.storage.getColumn(col) as unknown[];
-      const def = (defaults as Record<string, unknown>)[col as string];
-      newCols[col as string] =
-        def !== undefined ? colData.map((v) => v ?? def) : [...colData];
-    }
-
+  fillNull(defaults: { [K in keyof T]?: T[K] }): DataFrame<T> {
+    const newCols = typedFromEntries(
+      this.storage.columnNames().map((col) => {
+        const colData = this.storage.getColumn(col);
+        const def = defaults[col];
+        return [
+          col,
+          def !== undefined ? colData.map((v) => v ?? def) : [...colData],
+        ] as const;
+      }),
+    );
     return new DataFrame<T>(
       ColumnarStorage.fromUnsafe<T>(newCols),
       [...this.bitmask],
@@ -334,7 +341,7 @@ export class DataFrame<T extends Record<string, unknown>> {
 
   // ── Sorting ────────────────────────────────────────────────────────────────
 
-  sort(by: Array<{ col: keyof T; dir: "asc" | "desc" }>): DataFrame<T> {
+  sort(by: SortSpec<T>[]): DataFrame<T> {
     const n = this.storage.size();
     const newSortIndex = Array.from({ length: n }, (_, i) => i);
     const colArrays = by.map(({ col }) => this.storage.getColumn(col));
@@ -359,17 +366,13 @@ export class DataFrame<T extends Record<string, unknown>> {
 
   // ── Grouping ───────────────────────────────────────────────────────────────
 
-  groupBy<K extends keyof T>(col: K): GroupedFrame<T, K>;
-  groupBy<const K extends ReadonlyArray<keyof T>>(
-    cols: K,
-  ): GroupedFrame<T, K[number]>;
-  groupBy(
-    colOrCols: keyof T | ReadonlyArray<keyof T>,
-  ): GroupedFrame<T, keyof T> {
+  groupBy<const K extends keyof T | ReadonlyArray<keyof T>>(
+    colOrCols: K,
+  ): GroupedFrame<T, GroupByKey<T, K>> {
     const keys = Array.isArray(colOrCols)
       ? (colOrCols as ReadonlyArray<keyof T>)
       : [colOrCols as keyof T];
-    return new GroupedFrame(this, keys);
+    return new GroupedFrame(this, keys) as GroupedFrame<T, GroupByKey<T, K>>;
   }
 
   // ── Combining ──────────────────────────────────────────────────────────────
@@ -383,7 +386,7 @@ export class DataFrame<T extends Record<string, unknown>> {
     other: DataFrame<U>,
     options: { on: keyof T & keyof U; how?: How },
   ): DataFrame<JoinResult<T, U, How>> {
-    const how = (options.how ?? "inner") as JoinHow;
+    const how: JoinHow = options.how ?? "inner";
     const on = options.on;
     const leftRows = this.toRows();
     const rightRows = other.toRows();
@@ -412,8 +415,8 @@ export class DataFrame<T extends Record<string, unknown>> {
           matchedRightIndices.add(idx);
         }
       } else if (how === "left" || how === "outer") {
-        const nullRight = Object.fromEntries(
-          rightColNames.filter((c) => c !== on).map((c) => [c, null]),
+        const nullRight = typedFromEntries(
+          rightColNames.filter((c) => c !== on).map((c) => [c, null] as const),
         );
         result.push({ ...leftRow, ...nullRight } as Result);
       }
@@ -422,8 +425,8 @@ export class DataFrame<T extends Record<string, unknown>> {
     if (how === "right" || how === "outer") {
       rightRows.forEach((rightRow, idx) => {
         if (!matchedRightIndices.has(idx)) {
-          const nullLeft = Object.fromEntries(
-            leftColNames.filter((c) => c !== on).map((c) => [c, null]),
+          const nullLeft = typedFromEntries(
+            leftColNames.filter((c) => c !== on).map((c) => [c, null] as const),
           );
           result.push({ ...nullLeft, ...rightRow } as Result);
         }
@@ -446,17 +449,17 @@ export function fromRows<T extends Record<string, unknown>>(
 ): DataFrame<T> {
   if (rows.length === 0) {
     return DataFrame._create(
-      new ColumnarStorage({} as { [K in keyof T]: T[K][] }),
+      new ColumnarStorage({} as ColumnarData<T>),
       [],
       [],
     );
   }
 
-  const keys = Object.keys(rows[0]!) as Array<keyof T>;
-  const cols = {} as { [K in keyof T]: T[K][] };
-  for (const key of keys) {
-    cols[key] = rows.map((row) => row[key]);
-  }
+  const cols = typedFromEntries(
+    typedKeys(rows[0]!).map(
+      (key) => [key, rows.map((row) => row[key])] as const,
+    ),
+  ) as ColumnarData<T>;
 
   const n = rows.length;
   return DataFrame._create(
