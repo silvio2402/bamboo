@@ -125,15 +125,15 @@ Unlike traditional libraries that clone entire datasets whenever you filter or s
 
 ```mermaid
 graph TD
-    subgraph Raw Storage (Immutable Columnar)
+    subgraph Storage ["Raw Storage (Immutable Columnar)"]
         C1[Column A: Alice, Bob, Charlie]
         C2[Column B: 95, 42, 88]
     end
-    subgraph Lightweight DataFrame View
+    subgraph View ["Lightweight DataFrame View"]
         B[Bitmask: [true, false, true]]
         S[Sort Index: [2, 0, 1]]
     end
-    Raw Storage -->|Referenced By| Lightweight DataFrame View
+    Storage -->|Referenced By| View
 ```
 
 1. **Columnar Storage**: Data is stored vertically in contiguous arrays per column rather than horizontally in objects. This improves CPU cache friendliness and memory efficiency.
