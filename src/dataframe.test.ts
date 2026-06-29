@@ -308,7 +308,7 @@ describe("fillNull", () => {
   });
 
   test("does not mutate the original", () => {
-    const df = fromRows([{ x: null }]);
+    const df = fromRows<{ x: number | null }>([{ x: null }]);
     df.fillNull({ x: 0 });
     expect(df.toRows()).toEqual([{ x: null }]);
   });
