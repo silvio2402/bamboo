@@ -1,18 +1,24 @@
 export const sum =
-  (col: string) =>
-  (rows: Record<string, unknown>[]): number =>
+  <U extends Record<string, unknown> = Record<string, unknown>>(
+    col: keyof U & string,
+  ) =>
+  (rows: U[]): number =>
     rows.reduce((acc, r) => acc + ((r[col] as number) ?? 0), 0);
 
 export const mean =
-  (col: string) =>
-  (rows: Record<string, unknown>[]): number => {
+  <U extends Record<string, unknown> = Record<string, unknown>>(
+    col: keyof U & string,
+  ) =>
+  (rows: U[]): number => {
     if (rows.length === 0) return 0;
-    return sum(col)(rows) / rows.length;
+    return sum<U>(col)(rows) / rows.length;
   };
 
 export const min =
-  (col: string) =>
-  (rows: Record<string, unknown>[]): number | null => {
+  <U extends Record<string, unknown> = Record<string, unknown>>(
+    col: keyof U & string,
+  ) =>
+  (rows: U[]): number | null => {
     let result: number | null = null;
     for (const r of rows) {
       const v = r[col] as number | null;
@@ -22,8 +28,10 @@ export const min =
   };
 
 export const max =
-  (col: string) =>
-  (rows: Record<string, unknown>[]): number | null => {
+  <U extends Record<string, unknown> = Record<string, unknown>>(
+    col: keyof U & string,
+  ) =>
+  (rows: U[]): number | null => {
     let result: number | null = null;
     for (const r of rows) {
       const v = r[col] as number | null;
@@ -38,8 +46,10 @@ export const count =
     rows.length;
 
 export const median =
-  (col: string) =>
-  (rows: Record<string, unknown>[]): number | null => {
+  <U extends Record<string, unknown> = Record<string, unknown>>(
+    col: keyof U & string,
+  ) =>
+  (rows: U[]): number | null => {
     const vals = rows
       .map((r) => r[col] as number | null)
       .filter((v): v is number => v != null)
