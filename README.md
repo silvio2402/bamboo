@@ -130,8 +130,8 @@ graph TD
         C2[Column B: 95, 42, 88]
     end
     subgraph View ["Lightweight DataFrame View"]
-        B[Bitmask: [true, false, true]]
-        S[Sort Index: [2, 0, 1]]
+        B["Bitmask: [true, false, true]"]
+        S["Sort Index: [2, 0, 1]"]
     end
     Storage -->|Referenced By| View
 ```
