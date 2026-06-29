@@ -4,6 +4,21 @@ import { Lazy } from "./lazy";
 
 export type DeriveFn<T> = (row: T, index: number, allRows: T[]) => unknown;
 
+export type ColumnarData<T> = { [K in keyof T]: T[K][] };
+
+export type AggFn<T extends Record<string, unknown>, R = unknown> = (
+  rows: T[],
+) => R;
+
+export type SortDir = "asc" | "desc";
+
+export type SortSpec<T extends Record<string, unknown>> = {
+  col: keyof T;
+  dir: SortDir;
+};
+
+export type NullableValues<T> = { [K in keyof T]: T[K] | null };
+
 export type DeriveResult<
   T extends Record<string, unknown>,
   D extends Record<string, DeriveFn<T>>,
@@ -17,12 +32,10 @@ export type RenameResult<
 export type AggregateResult<
   T extends Record<string, unknown>,
   K extends keyof T,
-  A extends Record<string, (rows: T[]) => unknown>,
+  A extends Record<string, AggFn<T>>,
 > = Pick<T, K> & { [AK in keyof A]: ReturnType<A[AK]> };
 
 export type JoinHow = "inner" | "left" | "right" | "outer";
-
-type NullableValues<T> = { [K in keyof T]: T[K] | null };
 
 export type JoinResult<
   T extends Record<string, unknown>,
@@ -35,6 +48,28 @@ export type JoinResult<
     : How extends "right"
       ? NullableValues<T> & U
       : NullableValues<T> & NullableValues<U>;
+
+type GroupByKey<
+  T extends Record<string, unknown>,
+  K extends keyof T | ReadonlyArray<keyof T>,
+> = K extends ReadonlyArray<keyof T> ? K[number] : K & keyof T;
+
+/** Type-safe wrapper for Object.keys — encapsulates the necessary string[] cast. */
+export function typedKeys<T extends object>(obj: T): Array<keyof T & string> {
+  return Object.keys(obj) as Array<keyof T & string>;
+}
+
+/**
+ * Type-safe wrapper for Object.fromEntries — returns Record<K, V> instead of
+ * { [k: string]: V }, preserving the specific key union type.
+ * Boundary cast to K[] or ColumnarData<T> is still required when per-key value
+ * types differ (TypeScript cannot express those through a uniform V).
+ */
+export function typedFromEntries<K extends PropertyKey, V>(
+  entries: Iterable<readonly [K, V]>,
+): Record<K, V> {
+  return Object.fromEntries(entries) as Record<K, V>;
+}
 
 export class GroupedFrame<
   T extends Record<string, unknown>,

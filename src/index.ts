@@ -1,7 +1,18 @@
 export { ColumnarStorage } from "./storage";
 export type { Storage } from "./storage";
-export { DataFrame, GroupedFrame, fromRows } from "./dataframe";
+export {
+  DataFrame,
+  GroupedFrame,
+  fromRows,
+  typedKeys,
+  typedFromEntries,
+} from "./dataframe";
 export type {
+  ColumnarData,
+  AggFn,
+  SortDir,
+  SortSpec,
+  NullableValues,
   DeriveFn,
   DeriveResult,
   RenameResult,
